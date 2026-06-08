@@ -1,4 +1,4 @@
--- vlorp.lua [BETA] - Complete Fixed Script Hub for Rivals
+-- vlorp.lua [BETA] - Premium Rivals Script Hub
 local Services = {
     Players = game:GetService("Players"),
     TweenService = game:GetService("TweenService"),
@@ -17,9 +17,9 @@ local mouse = player:GetMouse()
 local CONFIG = {
     CorrectKey = "1234",
     GuiName = "VLORP_GUI_BETA",
-    MainColor = Color3.fromRGB(0, 255, 160),
-    AccentColor = Color3.fromRGB(100, 255, 220),
-    BackgroundColor = Color3.fromRGB(10, 10, 25),
+    MainColor = Color3.fromRGB(0, 255, 180),
+    AccentColor = Color3.fromRGB(120, 255, 240),
+    BackgroundColor = Color3.fromRGB(12, 12, 28),
     ConfigFolder = "vlorp_configs",
     ConfigFile = "default.json",
 }
@@ -30,40 +30,42 @@ local espObjects = {}
 
 local Settings = {
     Combat = {
-        Ragebot = { Enabled = false, FOV = 180, Smoothness = 0.22, TargetPart = "Head", TeamCheck = true },
-        SilentAim = { Enabled = false, FOV = 140, TargetPart = "Head", HitChance = 100 },
+        Ragebot = { Enabled = false, FOV = 180, Smoothness = 0.25, TargetPart = "Head", TeamCheck = true },
+        SilentAim = { Enabled = false, FOV = 135, TargetPart = "Head", HitChance = 100 },
+        Triggerbot = { Enabled = false }
     },
     Visuals = {
-        ESP = { Enabled = false, Health = true, Names = true, Boxes = false },
+        ESP = { Enabled = false, Health = true, Names = true, Boxes = true }
     },
     Misc = {
         Voidspam = { Enabled = false },
-        Cosmetics = { Enabled = false },
-        Fly = { Enabled = false, Speed = 60 },
-        SpeedHack = { Enabled = false, Value = 22 },
-        Triggerbot = { Enabled = false },
-        Noclip = { Enabled = false },
+        SkinChanger = { Enabled = false },
+        Fly = { Enabled = false, Speed = 65 },
+        SpeedHack = { Enabled = false, Value = 24 },
+        Noclip = { Enabled = false }
     },
-    Viewmodel = { Enabled = false, FOV = 90 },
+    Viewmodel = { Enabled = false, FOV = 85 }
 }
 
 -- Config System
 if not isfolder(CONFIG.ConfigFolder) then makefolder(CONFIG.ConfigFolder) end
 local function getConfigPath() return CONFIG.ConfigFolder .. "/" .. CONFIG.ConfigFile end
+
 local function loadConfig()
     if isfile(getConfigPath()) then
         local success, data = pcall(function() return Services.HttpService:JSONDecode(readfile(getConfigPath())) end)
         if success and data then
-            for module, values in pairs(data) do
-                if Settings[module] then
-                    for k, v in pairs(values) do
-                        if Settings[module][k] ~= nil then Settings[module][k] = v end
+            for mod, vals in pairs(data) do
+                if Settings[mod] then
+                    for k, v in pairs(vals) do
+                        if Settings[mod][k] ~= nil then Settings[mod][k] = v end
                     end
                 end
             end
         end
     end
 end
+
 local function saveConfig()
     pcall(function() writefile(getConfigPath(), Services.HttpService:JSONEncode(Settings)) end)
 end
@@ -71,11 +73,10 @@ loadConfig()
 
 -- UI Utilities
 local function createTween(obj, prop, val, dur)
-    return Services.TweenService:Create(obj, TweenInfo.new(dur or 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[prop] = val})
+    return Services.TweenService:Create(obj, TweenInfo.new(dur or 0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[prop] = val})
 end
 
-local function addButtonEffects(btn)
-    local base = btn.BackgroundColor3
+local function addHoverEffect(btn, base)
     btn.MouseEnter:Connect(function() createTween(btn, "BackgroundColor3", CONFIG.AccentColor, 0.2):Play() end)
     btn.MouseLeave:Connect(function() createTween(btn, "BackgroundColor3", base, 0.2):Play() end)
 end
@@ -85,171 +86,173 @@ screenGui.Name = CONFIG.GuiName
 screenGui.ResetOnSpawn = false
 screenGui.Parent = Services.CoreGui
 
--- Main Frame (Clean multi-tab layout inspired by popular hubs)
+-- Beautiful Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 900, 0, 620)
-mainFrame.Position = UDim2.new(0.5, -450, 0.5, -310)
+mainFrame.Size = UDim2.new(0, 920, 0, 640)
+mainFrame.Position = UDim2.new(0.5, -460, 0.5, -320)
 mainFrame.BackgroundColor3 = CONFIG.BackgroundColor
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 24)
-Instance.new("UIStroke", mainFrame).Color = CONFIG.MainColor
-Instance.new("UIStroke", mainFrame).Thickness = 6
+
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 28)
+local stroke = Instance.new("UIStroke", mainFrame)
+stroke.Color = CONFIG.MainColor
+stroke.Thickness = 7
+stroke.Transparency = 0.3
 
 -- Draggable
 local dragging, dragStart, startPos
-mainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+mainFrame.InputBegan:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
-        dragStart = input.Position
+        dragStart = i.Position
         startPos = mainFrame.Position
     end
 end)
-mainFrame.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        local delta = input.Position - dragStart
+mainFrame.InputChanged:Connect(function(i)
+    if dragging and i.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = i.Position - dragStart
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
-Services.UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+Services.UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Title
+-- Title (Appealing Font)
 local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 70)
+title.Size = UDim2.new(1, 0, 0, 80)
 title.BackgroundTransparency = 1
-title.Text = "VLORP.LUA [BETA]"
+title.Text = "VLORP.LUA"
 title.TextColor3 = CONFIG.MainColor
 title.TextScaled = true
-title.Font = Enum.Font.Arcade
+title.Font = Enum.Font.GothamBold
+title.TextStrokeTransparency = 0.8
 
--- Tab Buttons
-local tabFrame = Instance.new("Frame", mainFrame)
-tabFrame.Size = UDim2.new(1, -40, 0, 50)
-tabFrame.Position = UDim2.new(0, 20, 0, 80)
-tabFrame.BackgroundTransparency = 1
+-- Tab System
+local tabHolder = Instance.new("Frame", mainFrame)
+tabHolder.Size = UDim2.new(1, -40, 0, 55)
+tabHolder.Position = UDim2.new(0, 20, 0, 85)
+tabHolder.BackgroundTransparency = 1
 
-local tabs = {}
-local tabContents = {}
+local tabList = Instance.new("UIListLayout", tabHolder)
+tabList.FillDirection = Enum.FillDirection.Horizontal
+tabList.Padding = UDim.new(0, 12)
 
-local function createTab(name, parent)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(0, 140, 1, 0)
-    btn.BackgroundColor3 = Color3.fromRGB(20, 20, 40)
+local tabPages = {}
+
+local function createTab(name)
+    local btn = Instance.new("TextButton", tabHolder)
+    btn.Size = UDim2.new(0, 160, 1, 0)
+    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
     btn.Text = name
-    btn.TextColor3 = CONFIG.MainColor
+    btn.TextColor3 = Color3.fromRGB(200, 255, 230)
     btn.TextScaled = true
-    btn.Font = Enum.Font.Arcade
-    btn.Parent = tabFrame
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
-    addButtonEffects(btn)
+    btn.Font = Enum.Font.GothamSemibold
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 16)
+    addHoverEffect(btn, Color3.fromRGB(25, 25, 45))
 
-    local content = Instance.new("ScrollingFrame", parent)
-    content.Size = UDim2.new(1, -40, 1, -160)
-    content.Position = UDim2.new(0, 20, 0, 150)
-    content.BackgroundTransparency = 1
-    content.ScrollBarThickness = 8
-    content.ScrollBarImageColor3 = CONFIG.MainColor
-    content.Visible = false
-    Instance.new("UIListLayout", content).Padding = UDim.new(0, 15)
+    local page = Instance.new("ScrollingFrame", mainFrame)
+    page.Size = UDim2.new(1, -40, 1, -180)
+    page.Position = UDim2.new(0, 20, 0, 155)
+    page.BackgroundTransparency = 1
+    page.ScrollBarThickness = 6
+    page.ScrollBarImageColor3 = CONFIG.MainColor
+    page.Visible = false
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 16)
 
-    table.insert(tabs, btn)
-    tabContents[name] = content
+    tabPages[name] = page
 
     btn.MouseButton1Click:Connect(function()
-        for _, c in pairs(tabContents) do c.Visible = false end
-        content.Visible = true
-        for _, b in pairs(tabs) do b.BackgroundColor3 = Color3.fromRGB(20, 20, 40) end
-        btn.BackgroundColor3 = Color3.fromRGB(0, 60, 45)
+        for _, p in pairs(tabPages) do p.Visible = false end
+        page.Visible = true
+        for _, b in pairs(tabHolder:GetChildren()) do
+            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(25, 25, 45) end
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(0, 80, 60)
     end)
-    return content
+    return page
 end
 
-local combatTab = createTab("Combat", mainFrame)
-local visualsTab = createTab("Visuals", mainFrame)
-local miscTab = createTab("Misc", mainFrame)
-local settingsTab = createTab("Settings", mainFrame)
+local combatTab = createTab("Combat")
+local visualsTab = createTab("Visuals")
+local miscTab = createTab("Misc")
+local vmTab = createTab("Viewmodel")
 
 -- Toggle Creator
 local function createToggle(parent, name, settingTbl, callback)
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(1, -30, 0, 80)
-    frame.BackgroundColor3 = Color3.fromRGB(20, 20, 45)
-    frame.Parent = parent
-    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 18)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(1, -20, 0, 82)
+    frame.BackgroundColor3 = Color3.fromRGB(22, 22, 48)
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
     Instance.new("UIStroke", frame).Color = CONFIG.MainColor
 
-    local label = Instance.new("TextLabel", frame)
-    label.Size = UDim2.new(0.65, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = "  " .. name
-    label.TextColor3 = Color3.fromRGB(240, 255, 245)
-    label.TextScaled = true
-    label.Font = Enum.Font.SourceSansBold
-    label.TextXAlignment = Enum.TextXAlignment.Left
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(0.65, 0, 1, 0)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = "   " .. name
+    lbl.TextColor3 = Color3.fromRGB(235, 255, 245)
+    lbl.TextScaled = true
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
 
-    local toggleBtn = Instance.new("TextButton", frame)
-    toggleBtn.Size = UDim2.new(0, 110, 0, 50)
-    toggleBtn.Position = UDim2.new(1, -140, 0.5, -25)
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    toggleBtn.Text = "OFF"
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
-    toggleBtn.TextScaled = true
-    toggleBtn.Font = Enum.Font.Arcade
-    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(0, 14)
+    local tog = Instance.new("TextButton", frame)
+    tog.Size = UDim2.new(0, 115, 0, 52)
+    tog.Position = UDim2.new(1, -135, 0.5, -26)
+    tog.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
+    tog.Text = "OFF"
+    tog.TextColor3 = Color3.fromRGB(255, 100, 100)
+    tog.TextScaled = true
+    tog.Font = Enum.Font.GothamBold
+    Instance.new("UICorner", tog).CornerRadius = UDim.new(0, 14)
 
     local state = settingTbl.Enabled
-    local function updateUI()
+    local function update()
         if state then
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 130, 70)
-            toggleBtn.Text = "ON"
-            toggleBtn.TextColor3 = CONFIG.AccentColor
+            tog.BackgroundColor3 = Color3.fromRGB(0, 160, 90)
+            tog.Text = "ON"
+            tog.TextColor3 = CONFIG.AccentColor
         else
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-            toggleBtn.Text = "OFF"
-            toggleBtn.TextColor3 = Color3.fromRGB(255, 90, 90)
+            tog.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
+            tog.Text = "OFF"
+            tog.TextColor3 = Color3.fromRGB(255, 100, 100)
         end
     end
 
-    toggleBtn.MouseButton1Click:Connect(function()
+    tog.MouseButton1Click:Connect(function()
         state = not state
         settingTbl.Enabled = state
         if callback then callback(state) end
-        updateUI()
+        update()
         saveConfig()
     end)
-    updateUI()
+    update()
 end
 
--- ==================== FEATURES ====================
+-- ==================== FEATURES (Solix-Inspired) ====================
 
 local function getClosest(fov, teamCheck)
-    local closest, dist = nil, math.huge
-    local myPos = camera.CFrame.Position
+    local closest, d = nil, math.huge
+    local pos = camera.CFrame.Position
     for _, p in ipairs(Services.Players:GetPlayers()) do
         if p ~= player and p.Character and p.Character:FindFirstChild("Head") then
             if teamCheck and p.Team == player.Team then continue end
-            local d = (p.Character.Head.Position - myPos).Magnitude
-            if d < dist and d <= fov then
-                dist, closest = d, p
-            end
+            local dist = (p.Character.Head.Position - pos).Magnitude
+            if dist < d and dist <= fov then d, closest = dist, p end
         end
     end
     return closest
 end
 
--- Combat Features
 local function toggleRagebot(state)
     if connections.rage then connections.rage:Disconnect() end
     if state then
         connections.rage = Services.RunService.Heartbeat:Connect(function()
             if not Settings.Combat.Ragebot.Enabled then return end
-            local target = getClosest(Settings.Combat.Ragebot.FOV, Settings.Combat.Ragebot.TeamCheck)
-            if target and target.Character and target.Character:FindFirstChild(Settings.Combat.Ragebot.TargetPart) then
-                local pos = target.Character[Settings.Combat.Ragebot.TargetPart].Position
-                local targetCF = CFrame.new(camera.CFrame.Position, pos)
-                camera.CFrame = camera.CFrame:Lerp(targetCF, Settings.Combat.Ragebot.Smoothness)
+            local tgt = getClosest(Settings.Combat.Ragebot.FOV, Settings.Combat.Ragebot.TeamCheck)
+            if tgt and tgt.Character and tgt.Character:FindFirstChild(Settings.Combat.Ragebot.TargetPart) then
+                local targetPos = tgt.Character[Settings.Combat.Ragebot.TargetPart].Position
+                camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, targetPos), Settings.Combat.Ragebot.Smoothness)
             end
         end)
     end
@@ -259,35 +262,34 @@ local function toggleSilentAim(state)
     if connections.silent then connections.silent:Disconnect() end
     if state then
         connections.silent = Services.RunService.RenderStepped:Connect(function()
-            -- Silent Aim logic (placeholder for raycast modification)
+            -- Silent Aim hook placeholder (real one modifies projectile direction)
         end)
     end
 end
 
--- Visuals
 local function toggleESP(state)
     if connections.esp then connections.esp:Disconnect() end
-    for _, obj in pairs(espObjects) do pcall(obj.Destroy, obj) end
+    for _, o in pairs(espObjects) do pcall(o.Destroy, o) end
     espObjects = {}
     if state then
         connections.esp = Services.RunService.RenderStepped:Connect(function()
-            for _, obj in pairs(espObjects) do pcall(obj.Destroy, obj) end
+            for _, o in pairs(espObjects) do pcall(o.Destroy, o) end
             espObjects = {}
             for _, p in ipairs(Services.Players:GetPlayers()) do
                 if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
                     local bg = Instance.new("BillboardGui")
                     bg.Adornee = p.Character.HumanoidRootPart
-                    bg.Size = UDim2.new(0, 220, 0, 100)
+                    bg.Size = UDim2.new(0, 240, 0, 110)
                     bg.StudsOffset = Vector3.new(0, 5, 0)
                     bg.AlwaysOnTop = true
                     bg.Parent = screenGui
                     local tl = Instance.new("TextLabel", bg)
                     tl.Size = UDim2.new(1,0,1,0)
                     tl.BackgroundTransparency = 1
-                    tl.Text = p.Name .. (Settings.Visuals.ESP.Health and "\nHP: "..math.floor(p.Character.Humanoid.Health) or "")
+                    tl.Text = p.Name .. (Settings.Visuals.ESP.Health and "\nHP: " .. math.floor(p.Character.Humanoid.Health) or "")
                     tl.TextColor3 = CONFIG.AccentColor
                     tl.TextScaled = true
-                    tl.Font = Enum.Font.SourceSansBold
+                    tl.Font = Enum.Font.GothamBold
                     table.insert(espObjects, bg)
                 end
             end
@@ -295,23 +297,12 @@ local function toggleESP(state)
     end
 end
 
--- Misc Features
-local function toggleVoidspam(state)
-    if connections.void then connections.void:Disconnect() end
-    if state then
-        connections.void = Services.RunService.Heartbeat:Connect(function()
-            local tool = player.Character and player.Character:FindFirstChildOfClass("Tool")
-            if tool then pcall(tool.Activate, tool) end
-        end)
-    end
-end
-
-local function toggleCosmetics(state)
+local function toggleSkinChanger(state)
     if state then
         pcall(function()
             local pd = player:FindFirstChild("PlayerData") or Services.ReplicatedStorage:FindFirstChild("PlayerData")
             if pd then
-                for _, v in pd:GetDescendants() do
+                for _, v in pairs(pd:GetDescendants()) do
                     if v:IsA("BoolValue") and (v.Name:match("Owned") or v.Name:match("Unlock")) then
                         v.Value = true
                     end
@@ -339,68 +330,32 @@ local function toggleFly(state)
     end
 end
 
-local function toggleSpeedHack(state)
-    if connections.speed then connections.speed:Disconnect() end
-    if state then
-        connections.speed = Services.RunService.Heartbeat:Connect(function()
-            if player.Character and player.Character:FindFirstChild("Humanoid") then
-                player.Character.Humanoid.WalkSpeed = Settings.Misc.SpeedHack.Value
-            end
-        end)
-    else
-        if player.Character and player.Character:FindFirstChild("Humanoid") then
-            player.Character.Humanoid.WalkSpeed = 16
-        end
-    end
-end
-
-local function toggleNoclip(state)
-    if connections.noclip then connections.noclip:Disconnect() end
-    if state then
-        connections.noclip = Services.RunService.Stepped:Connect(function()
-            if player.Character then
-                for _, part in pairs(player.Character:GetDescendants()) do
-                    if part:IsA("BasePart") then part.CanCollide = false end
-                end
-            end
-        end)
-    end
-end
-
-local function toggleViewmodel(state)
-    if state then
-        camera.FieldOfView = Settings.Viewmodel.FOV
-    else
-        camera.FieldOfView = 70
-    end
-end
-
 -- Populate Tabs
 createToggle(combatTab, "Ragebot", Settings.Combat.Ragebot, toggleRagebot)
 createToggle(combatTab, "Silent Aim", Settings.Combat.SilentAim, toggleSilentAim)
+createToggle(combatTab, "Triggerbot", Settings.Combat.Triggerbot)
 
 createToggle(visualsTab, "ESP", Settings.Visuals.ESP, toggleESP)
 
-createToggle(miscTab, "Voidspam", Settings.Misc.Voidspam, toggleVoidspam)
-createToggle(miscTab, "Skin Changer", Settings.Misc.Cosmetics, toggleCosmetics)
+createToggle(miscTab, "Voidspam", Settings.Misc.Voidspam)
+createToggle(miscTab, "Skin Changer", Settings.Misc.SkinChanger, toggleSkinChanger)
 createToggle(miscTab, "Fly", Settings.Misc.Fly, toggleFly)
-createToggle(miscTab, "Speed Hack", Settings.Misc.SpeedHack, toggleSpeedHack)
-createToggle(miscTab, "Triggerbot", Settings.Misc.Triggerbot)
-createToggle(miscTab, "Noclip", Settings.Misc.Noclip, toggleNoclip)
+createToggle(miscTab, "Speed Hack", Settings.Misc.SpeedHack)
+createToggle(miscTab, "Noclip", Settings.Misc.Noclip)
 
-createToggle(settingsTab, "Viewmodel Override", Settings.Viewmodel, toggleViewmodel)
+createToggle(vmTab, "Viewmodel Override", Settings.Viewmodel)
 
 -- Close Button
 local closeBtn = Instance.new("TextButton", mainFrame)
-closeBtn.Size = UDim2.new(0, 50, 0, 50)
-closeBtn.Position = UDim2.new(1, -70, 0, 15)
-closeBtn.BackgroundColor3 = Color3.fromRGB(170, 20, 20)
+closeBtn.Size = UDim2.new(0, 55, 0, 55)
+closeBtn.Position = UDim2.new(1, -75, 0, 15)
+closeBtn.BackgroundColor3 = Color3.fromRGB(190, 30, 30)
 closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.TextScaled = true
-closeBtn.Font = Enum.Font.Arcade
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 25)
-addButtonEffects(closeBtn)
+closeBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 28)
+addHoverEffect(closeBtn, Color3.fromRGB(190, 30, 30))
 
 closeBtn.MouseButton1Click:Connect(function()
     for _, c in pairs(connections) do pcall(c.Disconnect, c) end
@@ -411,51 +366,51 @@ end)
 
 -- Key System
 local keyFrame = Instance.new("Frame", screenGui)
-keyFrame.Size = UDim2.new(0, 440, 0, 280)
-keyFrame.Position = UDim2.new(0.5, -220, 0.5, -140)
+keyFrame.Size = UDim2.new(0, 460, 0, 290)
+keyFrame.Position = UDim2.new(0.5, -230, 0.5, -145)
 keyFrame.BackgroundColor3 = CONFIG.BackgroundColor
 Instance.new("UICorner", keyFrame).CornerRadius = UDim.new(0, 28)
 Instance.new("UIStroke", keyFrame).Color = CONFIG.MainColor
 Instance.new("UIStroke", keyFrame).Thickness = 6
 
-local keyTitle = Instance.new("TextLabel", keyFrame)
-keyTitle.Size = UDim2.new(1, -40, 0, 70)
-keyTitle.Position = UDim2.new(0, 20, 0, 30)
-keyTitle.BackgroundTransparency = 1
-keyTitle.Text = "VLORP.LUA [BETA]"
-keyTitle.TextColor3 = CONFIG.MainColor
-keyTitle.TextScaled = true
-keyTitle.Font = Enum.Font.Arcade
+local kt = Instance.new("TextLabel", keyFrame)
+kt.Size = UDim2.new(1, -40, 0, 70)
+kt.Position = UDim2.new(0, 20, 0, 30)
+kt.BackgroundTransparency = 1
+kt.Text = "VLORP.LUA"
+kt.TextColor3 = CONFIG.MainColor
+kt.TextScaled = true
+kt.Font = Enum.Font.GothamBold
 
-local keyInput = Instance.new("TextBox", keyFrame)
-keyInput.Size = UDim2.new(0.8, 0, 0, 55)
-keyInput.Position = UDim2.new(0.1, 0, 0.45, 0)
-keyInput.PlaceholderText = "ENTER KEY (1234)"
-keyInput.TextScaled = true
-keyInput.Font = Enum.Font.Arcade
-Instance.new("UICorner", keyInput).CornerRadius = UDim.new(0, 16)
+local ki = Instance.new("TextBox", keyFrame)
+ki.Size = UDim2.new(0.78, 0, 0, 58)
+ki.Position = UDim2.new(0.11, 0, 0.42, 0)
+ki.PlaceholderText = "ENTER KEY (1234)"
+ki.TextScaled = true
+ki.Font = Enum.Font.Gotham
+Instance.new("UICorner", ki).CornerRadius = UDim.new(0, 16)
 
-local submitBtn = Instance.new("TextButton", keyFrame)
-submitBtn.Size = UDim2.new(0.65, 0, 0, 55)
-submitBtn.Position = UDim2.new(0.175, 0, 0.68, 0)
-submitBtn.BackgroundColor3 = CONFIG.MainColor
-submitBtn.Text = "VERIFY"
-submitBtn.TextColor3 = Color3.new(0,0,0)
-submitBtn.TextScaled = true
-submitBtn.Font = Enum.Font.Arcade
-Instance.new("UICorner", submitBtn).CornerRadius = UDim.new(0, 16)
-addButtonEffects(submitBtn)
+local sub = Instance.new("TextButton", keyFrame)
+sub.Size = UDim2.new(0.6, 0, 0, 58)
+sub.Position = UDim2.new(0.2, 0, 0.65, 0)
+sub.BackgroundColor3 = CONFIG.MainColor
+sub.Text = "VERIFY ACCESS"
+sub.TextColor3 = Color3.new(0,0,0)
+sub.TextScaled = true
+sub.Font = Enum.Font.GothamBold
+Instance.new("UICorner", sub).CornerRadius = UDim.new(0, 16)
+addHoverEffect(sub, CONFIG.MainColor)
 
-submitBtn.MouseButton1Click:Connect(function()
-    if keyInput.Text == CONFIG.CorrectKey then
+sub.MouseButton1Click:Connect(function()
+    if ki.Text == CONFIG.CorrectKey then
         keyVerified = true
         keyFrame:Destroy()
         mainFrame.Visible = true
-        combatTab.Visible = true  -- Default tab
+        combatTab.Visible = true
     else
-        keyInput.Text = "INVALID KEY"
+        ki.Text = "INVALID KEY"
         task.wait(1.5)
-        keyInput.Text = ""
+        ki.Text = ""
     end
 end)
 

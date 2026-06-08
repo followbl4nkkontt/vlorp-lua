@@ -1,5 +1,4 @@
 -- vlorp.lua [BETA] - Professional Alien-Themed Roblox Script Hub for Rivals
--- Optimized for Potassium Executor
 
 local Services = {
     Players = game:GetService("Players"),
@@ -21,7 +20,7 @@ local CONFIG = {
     AccentColor = Color3.fromRGB(100, 255, 220),
     BackgroundColor = Color3.fromRGB(5, 5, 15),
     ConfigFolder = "vlorp_configs",
-    ConfigFile = "vlorp_configs/default.json",
+    ConfigFile = "default.json",
 }
 
 local keyVerified = false
@@ -29,39 +28,24 @@ local connections = {}
 local espObjects = {}
 
 local Settings = {
-    Ragebot = {
-        Enabled = false,
-        TargetPart = "Head",
-        FOV = 180,
-        Smoothness = 0.28,
-        TeamCheck = true,
-    },
-    Voidspam = {
-        Enabled = false,
-        Speed = 0.08,
-    },
-    ESP = {
-        Enabled = false,
-        Health = true,
-        Names = true,
-    },
-    Cosmetics = {
-        Enabled = false,
-        UnlockAll = true,
-    },
-    SilentAim = {
-        Enabled = false,
-        FOV = 140,
-    },
+    Ragebot = { Enabled = false, TargetPart = "Head", FOV = 180, Smoothness = 0.28, TeamCheck = true },
+    Voidspam = { Enabled = false, Speed = 0.08 },
+    ESP = { Enabled = false, Health = true, Names = true },
+    Cosmetics = { Enabled = false, UnlockAll = true },
+    SilentAim = { Enabled = false, FOV = 140 },
 }
 
--- Config System with Folder
+-- Config System
 if not isfolder(CONFIG.ConfigFolder) then
     makefolder(CONFIG.ConfigFolder)
 end
 
-local function loadConfig(fileName)
-    local path = CONFIG.ConfigFolder .. "/" .. fileName
+local function getConfigPath(filename)
+    return CONFIG.ConfigFolder .. "/" .. (filename or CONFIG.ConfigFile)
+end
+
+local function loadConfig(filename)
+    local path = getConfigPath(filename)
     if isfile(path) then
         local success, data = pcall(function()
             return Services.HttpService:JSONDecode(readfile(path))
@@ -80,14 +64,13 @@ local function loadConfig(fileName)
     end
 end
 
-local function saveConfig(fileName)
-    local path = CONFIG.ConfigFolder .. "/" .. fileName
+local function saveConfig(filename)
+    local path = getConfigPath(filename)
     pcall(function()
         writefile(path, Services.HttpService:JSONEncode(Settings))
     end)
 end
 
--- Auto-load default
 loadConfig("default.json")
 
 -- UI Utilities
@@ -97,27 +80,19 @@ end
 
 local function fadeElement(element, target, duration)
     duration = duration or 0.35
-    if element:IsA("GuiObject") then
-        createTween(element, "BackgroundTransparency", target, duration):Play()
-    end
+    if element:IsA("GuiObject") then createTween(element, "BackgroundTransparency", target, duration):Play() end
     if element:IsA("TextLabel") or element:IsA("TextButton") or element:IsA("TextBox") then
         createTween(element, "TextTransparency", target, duration):Play()
     end
     local stroke = element:FindFirstChildOfClass("UIStroke")
-    if stroke then
-        createTween(stroke, "Transparency", target, duration):Play()
-    end
+    if stroke then createTween(stroke, "Transparency", target, duration):Play() end
 end
 
-local function addButtonEffects(button, baseColor, hoverColor)
-    baseColor = baseColor or CONFIG.MainColor
-    hoverColor = hoverColor or CONFIG.AccentColor
-    button.MouseEnter:Connect(function()
-        createTween(button, "BackgroundColor3", hoverColor, 0.2):Play()
-    end)
-    button.MouseLeave:Connect(function()
-        createTween(button, "BackgroundColor3", baseColor, 0.2):Play()
-    end)
+local function addButtonEffects(button, base, hover)
+    base = base or CONFIG.MainColor
+    hover = hover or CONFIG.AccentColor
+    button.MouseEnter:Connect(function() createTween(button, "BackgroundColor3", hover, 0.2):Play() end)
+    button.MouseLeave:Connect(function() createTween(button, "BackgroundColor3", base, 0.2):Play() end)
 end
 
 local screenGui = Instance.new("ScreenGui")
@@ -125,7 +100,7 @@ screenGui.Name = CONFIG.GuiName
 screenGui.ResetOnSpawn = false
 screenGui.Parent = Services.CoreGui
 
--- Key System
+-- ==================== KEY SYSTEM ====================
 local keyFrame = Instance.new("Frame")
 keyFrame.Size = UDim2.new(0, 440, 0, 280)
 keyFrame.Position = UDim2.new(0.5, -220, 0.5, -140)
@@ -133,9 +108,8 @@ keyFrame.BackgroundColor3 = CONFIG.BackgroundColor
 keyFrame.Parent = screenGui
 
 Instance.new("UICorner", keyFrame).CornerRadius = UDim.new(0, 28)
-local keyStroke = Instance.new("UIStroke", keyFrame)
-keyStroke.Color = CONFIG.MainColor
-keyStroke.Thickness = 6
+Instance.new("UIStroke", keyFrame).Color = CONFIG.MainColor
+Instance.new("UIStroke", keyFrame).Thickness = 6
 
 local keyTitle = Instance.new("TextLabel")
 keyTitle.Size = UDim2.new(1, -40, 0, 80)
@@ -163,14 +137,14 @@ submitButton.Size = UDim2.new(0.65, 0, 0, 60)
 submitButton.Position = UDim2.new(0.175, 0, 0.7, 0)
 submitButton.BackgroundColor3 = CONFIG.MainColor
 submitButton.Text = "VERIFY ACCESS"
-submitButton.TextColor3 = Color3.new(0, 0, 0)
+submitButton.TextColor3 = Color3.new(0,0,0)
 submitButton.TextScaled = true
 submitButton.Font = Enum.Font.Arcade
 submitButton.Parent = keyFrame
 Instance.new("UICorner", submitButton).CornerRadius = UDim.new(0, 16)
 addButtonEffects(submitButton)
 
--- Main Frame
+-- ==================== MAIN GUI ====================
 local mainFrame = Instance.new("Frame")
 mainFrame.Size = UDim2.new(0, 800, 0, 620)
 mainFrame.Position = UDim2.new(0.5, -400, 0.5, -310)
@@ -179,9 +153,8 @@ mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 28)
-local mainStroke = Instance.new("UIStroke", mainFrame)
-mainStroke.Color = CONFIG.MainColor
-mainStroke.Thickness = 6
+Instance.new("UIStroke", mainFrame).Color = CONFIG.MainColor
+Instance.new("UIStroke", mainFrame).Thickness = 6
 
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 90)
@@ -251,7 +224,7 @@ end
 createTabButton("MAIN", mainTab)
 createTabButton("SETTINGS", settingsTab)
 
--- Toggle Function
+-- Toggle Creator
 local function createToggle(parent, name, settingTbl, callback)
     local frame = Instance.new("Frame")
     frame.Size = UDim2.new(1, -30, 0, 82)
@@ -306,7 +279,7 @@ local function createToggle(parent, name, settingTbl, callback)
     updateUI()
 end
 
--- Feature Functions (fixed & clean)
+-- Feature Functions
 local function getClosestPlayer()
     local closest, dist = nil, math.huge
     local myPos = camera.CFrame.Position
@@ -349,11 +322,11 @@ end
 
 local function toggleESP(state)
     if connections.esp then connections.esp:Disconnect() end
-    for _, obj in pairs(espObjects) do obj:Destroy() end
+    for _, obj in pairs(espObjects) do pcall(obj.Destroy, obj) end
     espObjects = {}
     if state then
         connections.esp = Services.RunService.RenderStepped:Connect(function()
-            for _, obj in pairs(espObjects) do obj:Destroy() end
+            for _, obj in pairs(espObjects) do pcall(obj.Destroy, obj) end
             espObjects = {}
             for _, p in ipairs(Services.Players:GetPlayers()) do
                 if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
@@ -399,7 +372,7 @@ createToggle(mainTab, "Voidspam", Settings.Voidspam, toggleVoidspam)
 createToggle(mainTab, "ESP", Settings.ESP, toggleESP)
 createToggle(mainTab, "Skin Changer + Unlock", Settings.Cosmetics, toggleCosmetics)
 
--- SETTINGS TAB
+-- SETTINGS TAB (Settings + Configs)
 local settingsHeader = Instance.new("TextLabel")
 settingsHeader.Size = UDim2.new(1, -40, 0, 50)
 settingsHeader.BackgroundTransparency = 1
@@ -409,7 +382,7 @@ settingsHeader.TextScaled = true
 settingsHeader.Font = Enum.Font.Arcade
 settingsHeader.Parent = settingsTab
 
--- FOV Control
+-- FOV
 local fovLabel = Instance.new("TextLabel")
 fovLabel.Size = UDim2.new(1, -40, 0, 45)
 fovLabel.BackgroundTransparency = 1
@@ -437,7 +410,7 @@ for _, deg in ipairs({60, 120, 180}) do
     end)
 end
 
--- CONFIGS SECTION
+-- Configs Section
 local configHeader = Instance.new("TextLabel")
 configHeader.Size = UDim2.new(1, -40, 0, 50)
 configHeader.Position = UDim2.new(0, 20, 0, 280)
@@ -448,6 +421,7 @@ configHeader.TextScaled = true
 configHeader.Font = Enum.Font.Arcade
 configHeader.Parent = settingsTab
 
+-- Save / Load / Reset buttons (same as before, cleaned)
 local saveBtn = Instance.new("TextButton")
 saveBtn.Size = UDim2.new(0.45, 0, 0, 65)
 saveBtn.Position = UDim2.new(0.05, 0, 0, 340)
@@ -486,10 +460,8 @@ resetBtn.Parent = settingsTab
 Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 16)
 addButtonEffects(resetBtn)
 resetBtn.MouseButton1Click:Connect(function()
-    -- Reset to defaults
     Settings.Ragebot.FOV = 180
     Settings.Ragebot.Smoothness = 0.28
-    -- etc.
     saveConfig("default.json")
 end)
 
@@ -539,4 +511,4 @@ Services.UserInputService.InputBegan:Connect(function(i, gp)
     end
 end)
 
-print("vlorp.lua [BETA] loaded")
+print("vlorp.lua [BETA] loaded successfully")

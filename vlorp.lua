@@ -1,4 +1,4 @@
--- vlorp.lua [BETA] - Premium Rivals Script Hub
+-- vlorp.lua [BETA] - Unnamed Enhancements Style for Rivals
 local Services = {
     Players = game:GetService("Players"),
     TweenService = game:GetService("TweenService"),
@@ -12,7 +12,6 @@ local Services = {
 
 local player = Services.Players.LocalPlayer
 local camera = Services.Workspace.CurrentCamera
-local mouse = player:GetMouse()
 
 local CONFIG = {
     CorrectKey = "1234",
@@ -20,8 +19,6 @@ local CONFIG = {
     MainColor = Color3.fromRGB(0, 255, 180),
     AccentColor = Color3.fromRGB(120, 255, 240),
     BackgroundColor = Color3.fromRGB(12, 12, 28),
-    ConfigFolder = "vlorp_configs",
-    ConfigFile = "default.json",
 }
 
 local keyVerified = false
@@ -30,53 +27,51 @@ local espObjects = {}
 
 local Settings = {
     Combat = {
-        Ragebot = { Enabled = false, FOV = 180, Smoothness = 0.25, TargetPart = "Head", TeamCheck = true },
+        Ragebot = { Enabled = false, FOV = 180, Smoothness = 0.22, TargetPart = "Head", TeamCheck = true },
         SilentAim = { Enabled = false, FOV = 135, TargetPart = "Head", HitChance = 100 },
-        Triggerbot = { Enabled = false }
+        Triggerbot = { Enabled = false },
+        Wallbang = { Enabled = false }
     },
     Visuals = {
-        ESP = { Enabled = false, Health = true, Names = true, Boxes = true }
+        ESP = { Enabled = false, Health = true, Names = true, Boxes = true },
     },
     Misc = {
         Voidspam = { Enabled = false },
         SkinChanger = { Enabled = false },
         Fly = { Enabled = false, Speed = 65 },
         SpeedHack = { Enabled = false, Value = 24 },
-        Noclip = { Enabled = false }
-    },
-    Viewmodel = { Enabled = false, FOV = 85 }
+        Noclip = { Enabled = false },
+        AntiAim = { Enabled = false, Mode = "Spin", Speed = 25 }
+    }
 }
 
 -- Config System
-if not isfolder(CONFIG.ConfigFolder) then makefolder(CONFIG.ConfigFolder) end
-local function getConfigPath() return CONFIG.ConfigFolder .. "/" .. CONFIG.ConfigFile end
+local configFolder = "vlorp_configs"
+if not isfolder(configFolder) then makefolder(configFolder) end
+local configPath = configFolder .. "/default.json"
 
 local function loadConfig()
-    if isfile(getConfigPath()) then
-        local success, data = pcall(function() return Services.HttpService:JSONDecode(readfile(getConfigPath())) end)
+    if isfile(configPath) then
+        local success, data = pcall(function() return Services.HttpService:JSONDecode(readfile(configPath)) end)
         if success and data then
-            for mod, vals in pairs(data) do
-                if Settings[mod] then
-                    for k, v in pairs(vals) do
-                        if Settings[mod][k] ~= nil then Settings[mod][k] = v end
-                    end
-                end
+            for k, v in pairs(data) do
+                if Settings[k] then Settings[k] = v end
             end
         end
     end
 end
 
 local function saveConfig()
-    pcall(function() writefile(getConfigPath(), Services.HttpService:JSONEncode(Settings)) end)
+    pcall(function() writefile(configPath, Services.HttpService:JSONEncode(Settings)) end)
 end
 loadConfig()
 
 -- UI Utilities
 local function createTween(obj, prop, val, dur)
-    return Services.TweenService:Create(obj, TweenInfo.new(dur or 0.35, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[prop] = val})
+    return Services.TweenService:Create(obj, TweenInfo.new(dur or 0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {[prop] = val})
 end
 
-local function addHoverEffect(btn, base)
+local function addHover(btn, base)
     btn.MouseEnter:Connect(function() createTween(btn, "BackgroundColor3", CONFIG.AccentColor, 0.2):Play() end)
     btn.MouseLeave:Connect(function() createTween(btn, "BackgroundColor3", base, 0.2):Play() end)
 end
@@ -86,19 +81,16 @@ screenGui.Name = CONFIG.GuiName
 screenGui.ResetOnSpawn = false
 screenGui.Parent = Services.CoreGui
 
--- Beautiful Main Frame
 local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 920, 0, 640)
-mainFrame.Position = UDim2.new(0.5, -460, 0.5, -320)
+mainFrame.Size = UDim2.new(0, 960, 0, 680)
+mainFrame.Position = UDim2.new(0.5, -480, 0.5, -340)
 mainFrame.BackgroundColor3 = CONFIG.BackgroundColor
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
 Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 28)
-local stroke = Instance.new("UIStroke", mainFrame)
-stroke.Color = CONFIG.MainColor
-stroke.Thickness = 7
-stroke.Transparency = 0.3
+Instance.new("UIStroke", mainFrame).Color = CONFIG.MainColor
+Instance.new("UIStroke", mainFrame).Thickness = 8
 
 -- Draggable
 local dragging, dragStart, startPos
@@ -119,52 +111,51 @@ Services.UserInputService.InputEnded:Connect(function(i)
     if i.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
--- Title (Appealing Font)
+-- Title
 local title = Instance.new("TextLabel", mainFrame)
-title.Size = UDim2.new(1, 0, 0, 80)
+title.Size = UDim2.new(1, 0, 0, 90)
 title.BackgroundTransparency = 1
 title.Text = "VLORP.LUA"
 title.TextColor3 = CONFIG.MainColor
 title.TextScaled = true
-title.Font = Enum.Font.GothamBold
-title.TextStrokeTransparency = 0.8
+title.Font = Enum.Font.GothamBlack
 
--- Tab System
+-- Tabs
 local tabHolder = Instance.new("Frame", mainFrame)
-tabHolder.Size = UDim2.new(1, -40, 0, 55)
-tabHolder.Position = UDim2.new(0, 20, 0, 85)
+tabHolder.Size = UDim2.new(1, -40, 0, 65)
+tabHolder.Position = UDim2.new(0, 20, 0, 95)
 tabHolder.BackgroundTransparency = 1
 
 local tabList = Instance.new("UIListLayout", tabHolder)
 tabList.FillDirection = Enum.FillDirection.Horizontal
 tabList.Padding = UDim.new(0, 12)
 
-local tabPages = {}
+local pages = {}
 
 local function createTab(name)
     local btn = Instance.new("TextButton", tabHolder)
-    btn.Size = UDim2.new(0, 160, 1, 0)
+    btn.Size = UDim2.new(0, 180, 1, 0)
     btn.BackgroundColor3 = Color3.fromRGB(25, 25, 45)
     btn.Text = name
     btn.TextColor3 = Color3.fromRGB(200, 255, 230)
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamSemibold
-    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 16)
-    addHoverEffect(btn, Color3.fromRGB(25, 25, 45))
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 18)
+    addHover(btn, Color3.fromRGB(25, 25, 45))
 
     local page = Instance.new("ScrollingFrame", mainFrame)
-    page.Size = UDim2.new(1, -40, 1, -180)
-    page.Position = UDim2.new(0, 20, 0, 155)
+    page.Size = UDim2.new(1, -40, 1, -190)
+    page.Position = UDim2.new(0, 20, 0, 170)
     page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 6
+    page.ScrollBarThickness = 8
     page.ScrollBarImageColor3 = CONFIG.MainColor
     page.Visible = false
     Instance.new("UIListLayout", page).Padding = UDim.new(0, 16)
 
-    tabPages[name] = page
+    pages[name] = page
 
     btn.MouseButton1Click:Connect(function()
-        for _, p in pairs(tabPages) do p.Visible = false end
+        for _, p in pairs(pages) do p.Visible = false end
         page.Visible = true
         for _, b in pairs(tabHolder:GetChildren()) do
             if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(25, 25, 45) end
@@ -177,7 +168,6 @@ end
 local combatTab = createTab("Combat")
 local visualsTab = createTab("Visuals")
 local miscTab = createTab("Misc")
-local vmTab = createTab("Viewmodel")
 
 -- Toggle Creator
 local function createToggle(parent, name, settingTbl, callback)
@@ -187,18 +177,18 @@ local function createToggle(parent, name, settingTbl, callback)
     Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 20)
     Instance.new("UIStroke", frame).Color = CONFIG.MainColor
 
-    local lbl = Instance.new("TextLabel", frame)
-    lbl.Size = UDim2.new(0.65, 0, 1, 0)
-    lbl.BackgroundTransparency = 1
-    lbl.Text = "   " .. name
-    lbl.TextColor3 = Color3.fromRGB(235, 255, 245)
-    lbl.TextScaled = true
-    lbl.Font = Enum.Font.GothamSemibold
-    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(0.65, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = "  " .. name
+    label.TextColor3 = Color3.fromRGB(235, 255, 245)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamSemibold
+    label.TextXAlignment = Enum.TextXAlignment.Left
 
     local tog = Instance.new("TextButton", frame)
-    tog.Size = UDim2.new(0, 115, 0, 52)
-    tog.Position = UDim2.new(1, -135, 0.5, -26)
+    tog.Size = UDim2.new(0, 120, 0, 52)
+    tog.Position = UDim2.new(1, -145, 0.5, -26)
     tog.BackgroundColor3 = Color3.fromRGB(55, 55, 70)
     tog.Text = "OFF"
     tog.TextColor3 = Color3.fromRGB(255, 100, 100)
@@ -229,8 +219,7 @@ local function createToggle(parent, name, settingTbl, callback)
     update()
 end
 
--- ==================== FEATURES (Solix-Inspired) ====================
-
+-- Features
 local function getClosest(fov, teamCheck)
     local closest, d = nil, math.huge
     local pos = camera.CFrame.Position
@@ -249,20 +238,12 @@ local function toggleRagebot(state)
     if state then
         connections.rage = Services.RunService.Heartbeat:Connect(function()
             if not Settings.Combat.Ragebot.Enabled then return end
-            local tgt = getClosest(Settings.Combat.Ragebot.FOV, Settings.Combat.Ragebot.TeamCheck)
-            if tgt and tgt.Character and tgt.Character:FindFirstChild(Settings.Combat.Ragebot.TargetPart) then
-                local targetPos = tgt.Character[Settings.Combat.Ragebot.TargetPart].Position
-                camera.CFrame = camera.CFrame:Lerp(CFrame.new(camera.CFrame.Position, targetPos), Settings.Combat.Ragebot.Smoothness)
+            local target = getClosest(Settings.Combat.Ragebot.FOV, Settings.Combat.Ragebot.TeamCheck)
+            if target and target.Character then
+                local part = target.Character:FindFirstChild(Settings.Combat.Ragebot.TargetPart) or target.Character.Head
+                local cf = CFrame.new(camera.CFrame.Position, part.Position)
+                camera.CFrame = camera.CFrame:Lerp(cf, Settings.Combat.Ragebot.Smoothness)
             end
-        end)
-    end
-end
-
-local function toggleSilentAim(state)
-    if connections.silent then connections.silent:Disconnect() end
-    if state then
-        connections.silent = Services.RunService.RenderStepped:Connect(function()
-            -- Silent Aim hook placeholder (real one modifies projectile direction)
         end)
     end
 end
@@ -286,7 +267,7 @@ local function toggleESP(state)
                     local tl = Instance.new("TextLabel", bg)
                     tl.Size = UDim2.new(1,0,1,0)
                     tl.BackgroundTransparency = 1
-                    tl.Text = p.Name .. (Settings.Visuals.ESP.Health and "\nHP: " .. math.floor(p.Character.Humanoid.Health) or "")
+                    tl.Text = p.Name .. (Settings.Visuals.ESP.Health and "\nHP: "..math.floor(p.Character.Humanoid.Health) or "")
                     tl.TextColor3 = CONFIG.AccentColor
                     tl.TextScaled = true
                     tl.Font = Enum.Font.GothamBold
@@ -334,6 +315,7 @@ end
 createToggle(combatTab, "Ragebot", Settings.Combat.Ragebot, toggleRagebot)
 createToggle(combatTab, "Silent Aim", Settings.Combat.SilentAim, toggleSilentAim)
 createToggle(combatTab, "Triggerbot", Settings.Combat.Triggerbot)
+createToggle(combatTab, "Wallbang", Settings.Combat.Wallbang)
 
 createToggle(visualsTab, "ESP", Settings.Visuals.ESP, toggleESP)
 
@@ -342,20 +324,19 @@ createToggle(miscTab, "Skin Changer", Settings.Misc.SkinChanger, toggleSkinChang
 createToggle(miscTab, "Fly", Settings.Misc.Fly, toggleFly)
 createToggle(miscTab, "Speed Hack", Settings.Misc.SpeedHack)
 createToggle(miscTab, "Noclip", Settings.Misc.Noclip)
-
-createToggle(vmTab, "Viewmodel Override", Settings.Viewmodel)
+createToggle(miscTab, "Anti-Aim", Settings.Misc.AntiAim)
 
 -- Close Button
 local closeBtn = Instance.new("TextButton", mainFrame)
-closeBtn.Size = UDim2.new(0, 55, 0, 55)
-closeBtn.Position = UDim2.new(1, -75, 0, 15)
-closeBtn.BackgroundColor3 = Color3.fromRGB(190, 30, 30)
+closeBtn.Size = UDim2.new(0, 60, 0, 60)
+closeBtn.Position = UDim2.new(1, -80, 0, 18)
+closeBtn.BackgroundColor3 = Color3.fromRGB(185, 25, 25)
 closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.new(1,1,1)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.GothamBold
-Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 28)
-addHoverEffect(closeBtn, Color3.fromRGB(190, 30, 30))
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 30)
+addHover(closeBtn, Color3.fromRGB(185, 25, 25))
 
 closeBtn.MouseButton1Click:Connect(function()
     for _, c in pairs(connections) do pcall(c.Disconnect, c) end
@@ -380,7 +361,7 @@ kt.BackgroundTransparency = 1
 kt.Text = "VLORP.LUA"
 kt.TextColor3 = CONFIG.MainColor
 kt.TextScaled = true
-kt.Font = Enum.Font.GothamBold
+kt.Font = Enum.Font.GothamBlack
 
 local ki = Instance.new("TextBox", keyFrame)
 ki.Size = UDim2.new(0.78, 0, 0, 58)
@@ -399,7 +380,7 @@ sub.TextColor3 = Color3.new(0,0,0)
 sub.TextScaled = true
 sub.Font = Enum.Font.GothamBold
 Instance.new("UICorner", sub).CornerRadius = UDim.new(0, 16)
-addHoverEffect(sub, CONFIG.MainColor)
+addHover(sub, CONFIG.MainColor)
 
 sub.MouseButton1Click:Connect(function()
     if ki.Text == CONFIG.CorrectKey then
@@ -422,4 +403,4 @@ Services.UserInputService.InputBegan:Connect(function(i, gp)
     end
 end)
 
-print("vlorp.lua [BETA] loaded successfully")
+print("vlorp.lua [BETA] - Unnamed Enhancements Style Loaded Successfully!")
